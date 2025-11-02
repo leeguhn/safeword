@@ -1,0 +1,16 @@
+{
+  "hotwords": {
+    "safe_word": {
+      "module": "ovos-ww-plugin-vosk",
+      "key_phrase": "monster",
+      "listen": true,
+      "sensitivity": 0.5,
+      "trigger_level": 3
+    }
+  },
+  "listener": {
+    "sample_rate": 16000,
+    "channels": 1,
+    "chunk_size": 1024
+  }
+}

@@ -92,10 +92,36 @@ pip install pyaudio || {
 }
 
 echo "Installing remaining dependencies..."
-pip install -q flask flask-cors python-dotenv requests psutil cryptography
+pip install flask flask-cors python-dotenv requests psutil cryptography
 
-echo "Installing Mycroft Precise..."
-pip install -q precise-runner || echo "⚠️  Warning: Precise installation may have issues. See README for manual installation."
+echo "Installing compatible numpy and scipy versions for Python 3.11..."
+pip install "numpy>=1.19.5,<1.24" "scipy>=1.7.0,<1.11"
+
+echo "Installing Mycroft Precise Runner..."
+# Install precise-runner from the local runner directory with compatible dependencies
+RUNNER_PATH="mycroft-precise/mycroft-precise/runner"
+if [ -d "$RUNNER_PATH" ]; then
+    pip install -e "$RUNNER_PATH" || {
+        echo "⚠️  Warning: Precise runner installation failed."
+        exit 1
+    }
+else
+    echo "⚠️  Warning: Runner path not found at $RUNNER_PATH"
+    exit 1
+fi
+
+# Check for Mycroft Precise CLI tools in the virtual environment
+VENV_BIN_DIR=".venv/bin"
+echo "Checking for Mycroft Precise CLI tools in $VENV_BIN_DIR..."
+if [ ! -x "$VENV_BIN_DIR/precise-train" ] || [ ! -x "$VENV_BIN_DIR/precise-listen" ]; then
+    echo "⚠️  Mycroft Precise CLI tools (precise-train, precise-listen) not found."
+    echo "This is expected since we're only installing precise-runner (not the full training tools)."
+    echo "The runner functionality for wake word detection will still work."
+    echo "If you need the full training tools, they require TensorFlow 1.x which is not compatible with Python 3.11."
+    echo "See README.md for alternative training options."
+else
+    echo "✓ Mycroft Precise CLI tools found in $VENV_BIN_DIR"
+fi
 
 # Create .env if it doesn't exist
 if [ ! -f ".env" ]; then

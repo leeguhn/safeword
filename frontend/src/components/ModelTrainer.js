@@ -1,12 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-function ModelTrainer({ onTrainingComplete, datasetStats }) {
+function ModelTrainer({ onTrainingComplete, datasetStats, onSamplesUpdated }) {
   const [isTraining, setIsTraining] = useState(false);
   const [epochs, setEpochs] = useState(10);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
   const [logs, setLogs] = useState('');
+  const [samples, setSamples] = useState([]);
+  const [playingFile, setPlayingFile] = useState(null);
+
+  useEffect(() => {
+    loadSamples();
+  }, [datasetStats]);
+
+  const loadSamples = async () => {
+    try {
+      const response = await axios.get('/list-samples');
+      setSamples(response.data.samples);
+    } catch (error) {
+      console.error('Error loading samples:', error);
+    }
+  };
+
+  const playSample = (sample) => {
+    const audio = new Audio(`/play-sample/${sample.label}/${sample.filename}`);
+    setPlayingFile(sample.filename);
+    audio.play();
+    audio.onended = () => setPlayingFile(null);
+    audio.onerror = () => {
+      setPlayingFile(null);
+      alert('Error playing audio file');
+    };
+  };
+
+  const deleteSample = async (sample) => {
+    if (!window.confirm(`Delete ${sample.filename}?`)) return;
+
+    try {
+      await axios.delete('/delete-sample', {
+        data: { filename: sample.filename, label: sample.label }
+      });
+      // Reload the samples list
+      await loadSamples();
+      // Update parent component stats
+      const statsResponse = await axios.get('/dataset-stats');
+      if (onSamplesUpdated) {
+        onSamplesUpdated(statsResponse.data);
+      }
+    } catch (error) {
+      console.error('Error deleting sample:', error);
+      alert('Error deleting sample: ' + (error.response?.data?.error || error.message));
+    }
+  };
 
   const startTraining = async () => {
     if (datasetStats && datasetStats.wake_word < 10) {
@@ -49,6 +95,9 @@ function ModelTrainer({ onTrainingComplete, datasetStats }) {
 
   const readyToTrain = datasetStats && datasetStats.wake_word >= 10;
 
+  const wakeSamples = samples.filter(s => s.label === 'wake-word');
+  const notWakeSamples = samples.filter(s => s.label === 'not-wake-word');
+
   return (
     <div className="card">
       <h2>Train Model</h2>
@@ -63,6 +112,69 @@ function ModelTrainer({ onTrainingComplete, datasetStats }) {
             <div className="label">Not Wake Word</div>
             <div className="value">{datasetStats.not_wake_word}</div>
           </div>
+        </div>
+      )}
+
+      {/* Samples Review Section */}
+      {samples.length > 0 && (
+        <div style={{ marginTop: '20px' }}>
+          <h3>Review Recorded Samples</h3>
+          
+          {wakeSamples.length > 0 && (
+            <div style={{ marginBottom: '15px' }}>
+              <h4 style={{ color: '#28a745' }}>Wake Word Samples ({wakeSamples.length})</h4>
+              <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px', padding: '10px' }}>
+                {wakeSamples.map((sample, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', borderBottom: '1px solid #f0f0f0' }}>
+                    <span style={{ fontSize: '13px' }}>{sample.filename}</span>
+                    <div>
+                      <button 
+                        onClick={() => playSample(sample)}
+                        disabled={playingFile === sample.filename}
+                        style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px' }}
+                      >
+                        {playingFile === sample.filename ? '▶️ Playing...' : '▶️ Play'}
+                      </button>
+                      <button 
+                        onClick={() => deleteSample(sample)}
+                        style={{ padding: '4px 8px', fontSize: '12px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {notWakeSamples.length > 0 && (
+            <div style={{ marginBottom: '15px' }}>
+              <h4 style={{ color: '#6c757d' }}>Not Wake Word Samples ({notWakeSamples.length})</h4>
+              <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px', padding: '10px' }}>
+                {notWakeSamples.map((sample, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', borderBottom: '1px solid #f0f0f0' }}>
+                    <span style={{ fontSize: '13px' }}>{sample.filename}</span>
+                    <div>
+                      <button 
+                        onClick={() => playSample(sample)}
+                        disabled={playingFile === sample.filename}
+                        style={{ marginRight: '5px', padding: '4px 8px', fontSize: '12px' }}
+                      >
+                        {playingFile === sample.filename ? '▶️ Playing...' : '▶️ Play'}
+                      </button>
+                      <button 
+                        onClick={() => deleteSample(sample)}
+                        style={{ padding: '4px 8px', fontSize: '12px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
       

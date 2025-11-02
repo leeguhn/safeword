@@ -19,17 +19,12 @@ class PreciseRunner:
         self.is_listening = False
         
     def check_precise_installed(self) -> tuple[bool, str]:
-        """Check if Precise commands are available."""
-        commands_to_check = ['precise-train', 'precise-listen']
-        missing = []
-        
-        for cmd in commands_to_check:
-            if not shutil.which(cmd):
-                missing.append(cmd)
-        
-        if missing:
-            return False, f"Missing Precise commands: {', '.join(missing)}. Install with: pip install precise-runner"
-        return True, "Precise is installed"
+        """Check if Precise runner library is available."""
+        try:
+            import precise_runner
+            return True, "Precise runner library is installed"
+        except ImportError:
+            return False, "Precise runner library not found. Install with: pip install -e backend/mycroft-precise/mycroft-precise/runner"
     
     def train_model(self, data_dir: str, model_path: str, epochs: int = 10) -> Dict[str, any]:
         """

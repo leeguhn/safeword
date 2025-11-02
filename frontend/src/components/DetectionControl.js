@@ -10,9 +10,14 @@ function DetectionControl({ modelExists }) {
 
   useEffect(() => {
     // Poll status every 2 seconds
-    const interval = setInterval(checkStatus, 2000);
+    const interval = setInterval(() => {
+      checkStatus();
+      if (isListening) {
+        checkForDetections();
+      }
+    }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isListening]);
 
   const checkStatus = async () => {
     try {
@@ -23,20 +28,37 @@ function DetectionControl({ modelExists }) {
     }
   };
 
-  const startDetection = async () => {
-    if (!modelExists) {
-      setMessage('Error: No trained model found. Please train a model first.');
-      setMessageType('error');
-      return;
+  const checkForDetections = async () => {
+    try {
+      const response = await axios.get('/detection-events');
+      if (response.data.events && response.data.events.length > 0) {
+        // Update events, avoiding duplicates
+        const newEvents = response.data.events.map(e => ({
+          time: new Date(e.timestamp).toLocaleTimeString(),
+          message: e.message
+        }));
+        setDetectionEvents(newEvents);
+      }
+    } catch (error) {
+      console.error('Error checking detections:', error);
     }
+  };
 
+  const startDetection = async () => {
     try {
       const response = await axios.post('/start-detection', { threshold });
       
       if (response.data.success) {
         setIsListening(true);
-        setMessage(`✓ Listening for wake word (PID: ${response.data.pid})`);
+        setMessage(`✓ Listening for wake word: "${response.data.key_phrase}"`);
         setMessageType('success');
+        
+        // Add event
+        const event = {
+          time: new Date().toLocaleTimeString(),
+          message: `Started listening for: "${response.data.key_phrase}"`
+        };
+        setDetectionEvents([event, ...detectionEvents.slice(0, 4)]);
       } else {
         setMessage('Error: ' + response.data.error);
         setMessageType('error');
@@ -87,15 +109,16 @@ function DetectionControl({ modelExists }) {
     <div className="card">
       <h2>
         Detection Control
-        {isListening && <span className="status-badge listening">Listening</span>}
-        {!isListening && <span className="status-badge idle">Idle</span>}
+        {isListening && <span className="status-badge listening">🎤 Listening</span>}
+        {!isListening && <span className="status-badge idle">⏸ Idle</span>}
       </h2>
       
-      {!modelExists && (
-        <div className="alert warning">
-          No trained model found. Please train a model before starting detection.
-        </div>
-      )}
+      <div className="alert info" style={{ marginBottom: '15px' }}>
+        <strong>ℹ️ OVOS Wake Word Detection</strong>
+        <p style={{ marginTop: '5px', fontSize: '14px' }}>
+          Configure your wake word in the section above, then start detection here.
+        </p>
+      </div>
       
       <div className="form-group">
         <label>Detection Threshold: {threshold}</label>
@@ -116,8 +139,7 @@ function DetectionControl({ modelExists }) {
       <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
         {!isListening ? (
           <button 
-            onClick={startDetection} 
-            disabled={!modelExists}
+            onClick={startDetection}
             className="success"
           >
             Start Detection

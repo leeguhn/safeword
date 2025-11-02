@@ -4,6 +4,7 @@ import RecordSamples from './components/RecordSamples';
 import ModelTrainer from './components/ModelTrainer';
 import DetectionControl from './components/DetectionControl';
 import ActionsConfig from './components/ActionsConfig';
+import WakeWordConfig from './components/WakeWordConfig';
 import axios from 'axios';
 
 function App() {
@@ -26,10 +27,10 @@ function App() {
       setPreciseInstalled(response.data.installed);
       
       if (!response.data.installed) {
-        console.warn('Precise not installed:', response.data.message);
+        console.warn('OVOS not installed:', response.data.message);
       }
     } catch (error) {
-      console.error('Error checking Precise installation:', error);
+      console.error('Error checking OVOS installation:', error);
       setPreciseInstalled(false);
     }
   };
@@ -49,6 +50,11 @@ function App() {
     setDatasetStats(data.dataset_stats);
   };
 
+  const handleSamplesUpdated = (stats) => {
+    // Update dataset stats when samples are deleted
+    setDatasetStats(stats);
+  };
+
   const handleTrainingComplete = (data) => {
     // Refresh status to show model exists
     fetchStatus();
@@ -63,9 +69,9 @@ function App() {
 
       {preciseInstalled === false && (
         <div className="alert error">
-          <strong>⚠️ Mycroft Precise not installed!</strong>
-          <p>Install with: <code>pip install precise-runner</code></p>
-          <p>Some features will not work until Precise is installed.</p>
+          <strong>⚠️ OVOS Wake Word Plugins not installed!</strong>
+          <p>Install with: <code>pip install ovos-plugin-manager ovos-ww-plugin-vosk</code></p>
+          <p>Some features will not work until OVOS plugins are installed.</p>
         </div>
       )}
 
@@ -96,17 +102,30 @@ function App() {
       )}
 
       <div className="container">
-        <RecordSamples onSampleRecorded={handleSampleRecorded} />
-        <ModelTrainer 
-          onTrainingComplete={handleTrainingComplete}
-          datasetStats={datasetStats}
-        />
+        <WakeWordConfig />
       </div>
 
       <div className="container">
-        <DetectionControl modelExists={systemStatus?.model.exists} />
+        <DetectionControl modelExists={true} />
         <ActionsConfig />
       </div>
+
+      <details style={{ marginTop: '20px', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px' }}>
+          📁 Advanced: Sample Recording & Management (Optional)
+        </summary>
+        <p style={{ color: '#666', fontSize: '14px', marginBottom: '15px' }}>
+          OVOS doesn't require training samples, but you can still record and manage audio samples for other purposes.
+        </p>
+        <div className="container">
+          <RecordSamples onSampleRecorded={handleSampleRecorded} />
+          <ModelTrainer 
+            onTrainingComplete={handleTrainingComplete}
+            onSamplesUpdated={handleSamplesUpdated}
+            datasetStats={datasetStats}
+          />
+        </div>
+      </details>
 
       <footer style={{ 
         textAlign: 'center', 
@@ -116,7 +135,7 @@ function App() {
         fontSize: '14px'
       }}>
         <p>SafeWord v0.1.0 - Personal Safety Prototype</p>
-        <p>Built with React + Flask + Mycroft Precise</p>
+        <p>Built with React + Flask + OVOS</p>
       </footer>
     </div>
   );

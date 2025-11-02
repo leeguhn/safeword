@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+
+# Flask
+instance/
+.webassets-cache
+
+# Data and Models
+backend/data/wake-word/*.wav
+backend/data/not-wake-word/*.wav
+backend/data/recordings/
+backend/models/*.net
+backend/models/*.pb
+backend/models/*.params
+
+# Logs
+*.log
+backend/data/events.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node / React
+node_modules/
+frontend/build/
+frontend/.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# OS
+Thumbs.db
